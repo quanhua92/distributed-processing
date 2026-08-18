@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 from distributed_processing.api.schemas import JobResponse, JobSubmitRequest, ProcessorsListResponse, StatsResponse
 from distributed_processing.processors.registry import create_default_registry
-from distributed_processing.telemetry import get_tracer, jobs_submitted_counter
+from distributed_processing.telemetry import get_tracer, record_job_submitted
 
 log: Final = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,8 +71,7 @@ async def submit_job(req: JobSubmitRequest, request: Request) -> dict[str, Any]:
         await js.publish(cfg.nats_subject_request, json.dumps(msg_payload).encode())
 
         # 3. Increment OTEL metric
-        if jobs_submitted_counter:
-            jobs_submitted_counter.add(1, {"job_type": req.job_type})
+        record_job_submitted(req.job_type)
 
         log.info("job.submitted id=%s type=%s", job_id, req.job_type)
 

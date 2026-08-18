@@ -16,7 +16,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_submitted_total) or vector(0)",
+          "expr": "sum(jobs_submitted_total) or sum(jobs_submitted) or vector(0)",
           "legendFormat": "Submitted",
           "refId": "A"
         }
@@ -24,7 +24,6 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
-          "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
         },
         "overrides": []
@@ -46,7 +45,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_completed_total) or vector(0)",
+          "expr": "sum(jobs_completed_total) or sum(jobs_completed) or vector(0)",
           "legendFormat": "Completed",
           "refId": "A"
         }
@@ -75,7 +74,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_failed_total) or vector(0)",
+          "expr": "sum(jobs_failed_total) or sum(jobs_failed) or vector(0)",
           "legendFormat": "Failed",
           "refId": "A"
         }
@@ -105,12 +104,12 @@
       "collapsed": false,
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "id": 4,
-      "title": "Audit Logs Flushed (Batches)",
+      "title": "Audit Batches Flushed",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(audit_batches_flushed_total) or vector(0)",
+          "expr": "sum(audit_batches_flushed_total) or sum(audit_batches_flushed) or vector(0)",
           "legendFormat": "Flushed Batches",
           "refId": "A"
         }
@@ -139,12 +138,12 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(rate(jobs_completed_total[1m]))",
+          "expr": "sum(rate(jobs_completed_total[1m])) or sum(rate(jobs_completed[1m]))",
           "legendFormat": "Completed ops/s",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(jobs_submitted_total[1m]))",
+          "expr": "sum(rate(jobs_submitted_total[1m])) or sum(rate(jobs_submitted[1m]))",
           "legendFormat": "Submitted ops/s",
           "refId": "B"
         }
@@ -188,18 +187,18 @@
       "collapsed": false,
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
       "id": 7,
-      "title": "Bytes Processed & In-Flight Concurrency",
+      "title": "Active Workers & Bytes Processed",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(rate(bytes_processed_total[1m]))",
-          "legendFormat": "Bytes/sec",
+          "expr": "sum(active_workers) or sum(active_workers_gauge) or vector(0)",
+          "legendFormat": "Active In-Flight Workers",
           "refId": "A"
         },
         {
-          "expr": "sum(active_workers_gauge)",
-          "legendFormat": "Active In-Flight Workers",
+          "expr": "sum(rate(bytes_processed_total[1m])) or sum(rate(bytes_processed[1m]))",
+          "legendFormat": "Bytes/sec",
           "refId": "B"
         }
       ],
@@ -214,11 +213,11 @@
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["distributed-processing", "openobserve", "nats", "pillow"],
+  "tags": ["distributed-processing", "openobserve", "nats"],
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m"] },
   "timezone": "browser",
   "title": "Distributed Processing Overview",
   "uid": "distributed-processing-overview",
-  "version": 1
+  "version": 2
 }

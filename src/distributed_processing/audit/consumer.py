@@ -18,7 +18,7 @@ from distributed_processing.nats_setup import ensure_nats_streams
 from distributed_processing.settings import Settings
 from distributed_processing.storage.postgres import PostgresDatabase
 from distributed_processing.storage.s3 import S3Storage
-from distributed_processing.telemetry import audit_batches_counter
+from distributed_processing.telemetry import record_audit_batch_flushed
 
 log: Final = logging.getLogger(__name__)
 
@@ -74,8 +74,7 @@ class AuditArchiver:
             if job_ids:
                 await self.db.update_log_archive_key(job_ids, f"s3://{self.cfg.s3_bucket_logs}/{s3_key}")
 
-            if audit_batches_counter:
-                audit_batches_counter.add(1)
+            record_audit_batch_flushed()
 
             log.info(
                 "audit.flushed events=%d s3_key=%s bytes=%d",

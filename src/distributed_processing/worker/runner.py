@@ -15,12 +15,10 @@ from distributed_processing.settings import Settings
 from distributed_processing.storage.postgres import PostgresDatabase
 from distributed_processing.storage.s3 import S3Storage
 from distributed_processing.telemetry import (
-    active_workers_gauge,
-    bytes_processed_counter,
     get_tracer,
-    job_duration_histogram,
-    jobs_completed_counter,
-    jobs_failed_counter,
+    record_active_worker,
+    record_job_completed,
+    record_job_failed,
 )
 
 log: Final = logging.getLogger(__name__)
@@ -62,8 +60,7 @@ class JobRunner:
             },
         ) if tracer else None
 
-        if active_workers_gauge:
-            active_workers_gauge.add(1)
+        record_active_worker(1)
 
         start_time = time.monotonic()
         try:
@@ -110,12 +107,8 @@ class JobRunner:
             )
 
             # 6. Record OTEL metrics
-            if jobs_completed_counter:
-                jobs_completed_counter.add(1, {"worker_id": self.worker_id, "job_type": job_type})
-            if job_duration_histogram:
-                job_duration_histogram.record(duration_ms, {"worker_id": self.worker_id, "job_type": job_type})
-            if bytes_processed_counter and "bytes_processed" in result:
-                bytes_processed_counter.add(int(result["bytes_processed"]))
+            bytes_count = int(result.get("bytes_processed", 0)) if isinstance(result, dict) else 0
+            record_job_completed(self.worker_id, job_type, duration_ms, bytes_count)
 
             log.info("job.completed job_id=%s type=%s duration_ms=%d", job_id, job_type, duration_ms)
             return True
@@ -139,14 +132,11 @@ class JobRunner:
                 extra={"error": error_msg, "duration_ms": duration_ms},
             )
 
-            if jobs_failed_counter:
-                jobs_failed_counter.add(1, {"worker_id": self.worker_id, "job_type": job_type})
-
+            record_job_failed(self.worker_id, job_type)
             return False
 
         finally:
-            if active_workers_gauge:
-                active_workers_gauge.add(-1)
+            record_active_worker(-1)
             if span:
                 span.end()
 

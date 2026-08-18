@@ -22,13 +22,13 @@ _meter: metrics.Meter | None = None
 _tracer: trace.Tracer | None = None
 
 # Metric instruments
-jobs_submitted_counter: metrics.Counter | None = None
-jobs_completed_counter: metrics.Counter | None = None
-jobs_failed_counter: metrics.Counter | None = None
-job_duration_histogram: metrics.Histogram | None = None
-bytes_processed_counter: metrics.Counter | None = None
-active_workers_gauge: metrics.UpDownCounter | None = None
-audit_batches_counter: metrics.Counter | None = None
+_jobs_submitted = None
+_jobs_completed = None
+_jobs_failed = None
+_job_duration = None
+_bytes_processed = None
+_active_workers = None
+_audit_batches = None
 
 
 def setup_telemetry(
@@ -38,13 +38,9 @@ def setup_telemetry(
     o2_user: str = "",
     o2_password: str = "",
 ) -> metrics.Meter | None:
-    """Initialize OpenTelemetry OTLP exporters for traces and metrics.
-
-    Safe to call multiple times. Subsequent calls return the existing meter.
-    """
+    """Initialize OpenTelemetry OTLP exporters for traces and metrics."""
     global _initialized, _meter, _tracer
-    global jobs_submitted_counter, jobs_completed_counter, jobs_failed_counter
-    global job_duration_histogram, bytes_processed_counter, active_workers_gauge, audit_batches_counter
+    global _jobs_submitted, _jobs_completed, _jobs_failed, _job_duration, _bytes_processed, _active_workers, _audit_batches
 
     if _initialized:
         return _meter
@@ -85,45 +81,44 @@ def setup_telemetry(
             timeout=10,
             headers=headers,
         ),
-        export_interval_millis=5_000,  # 5s flush interval
+        export_interval_millis=2_000,  # 2s flush interval for fast updates
     )
     mp = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(mp)
     _meter = metrics.get_meter("distributed-processing", "0.1.0")
 
-    # Initialize instruments
-    jobs_submitted_counter = _meter.create_counter(
-        "jobs_submitted_total",
-        description="Total number of image processing jobs submitted",
+    _jobs_submitted = _meter.create_counter(
+        "jobs_submitted",
+        description="Total number of jobs submitted",
         unit="1",
     )
-    jobs_completed_counter = _meter.create_counter(
-        "jobs_completed_total",
-        description="Total number of image processing jobs completed successfully",
+    _jobs_completed = _meter.create_counter(
+        "jobs_completed",
+        description="Total number of jobs completed successfully",
         unit="1",
     )
-    jobs_failed_counter = _meter.create_counter(
-        "jobs_failed_total",
-        description="Total number of image processing jobs failed",
+    _jobs_failed = _meter.create_counter(
+        "jobs_failed",
+        description="Total number of jobs failed",
         unit="1",
     )
-    job_duration_histogram = _meter.create_histogram(
+    _job_duration = _meter.create_histogram(
         "job_duration_ms",
-        description="Execution duration of image processing jobs in milliseconds",
+        description="Execution duration of jobs in milliseconds",
         unit="ms",
     )
-    bytes_processed_counter = _meter.create_counter(
-        "bytes_processed_total",
-        description="Total bytes of images processed",
+    _bytes_processed = _meter.create_counter(
+        "bytes_processed",
+        description="Total bytes processed",
         unit="bytes",
     )
-    active_workers_gauge = _meter.create_up_down_counter(
-        "active_workers_gauge",
+    _active_workers = _meter.create_up_down_counter(
+        "active_workers",
         description="Number of currently in-flight worker executions",
         unit="1",
     )
-    audit_batches_counter = _meter.create_counter(
-        "audit_batches_flushed_total",
+    _audit_batches = _meter.create_counter(
+        "audit_batches_flushed",
         description="Total number of audit event batches uploaded to S3",
         unit="1",
     )
@@ -139,9 +134,35 @@ def _auth_headers(user: str, password: str) -> dict[str, str]:
     return {"Authorization": f"Basic {token}"}
 
 
-def get_meter() -> metrics.Meter | None:
-    return _meter
-
-
 def get_tracer() -> trace.Tracer | None:
     return _tracer
+
+
+# Metric recording helper functions
+def record_job_submitted(job_type: str) -> None:
+    if _jobs_submitted:
+        _jobs_submitted.add(1, {"job_type": job_type})
+
+
+def record_job_completed(worker_id: str, job_type: str, duration_ms: int, bytes_count: int = 0) -> None:
+    if _jobs_completed:
+        _jobs_completed.add(1, {"worker_id": worker_id, "job_type": job_type})
+    if _job_duration:
+        _job_duration.record(duration_ms, {"worker_id": worker_id, "job_type": job_type})
+    if _bytes_processed and bytes_count > 0:
+        _bytes_processed.add(bytes_count, {"job_type": job_type})
+
+
+def record_job_failed(worker_id: str, job_type: str) -> None:
+    if _jobs_failed:
+        _jobs_failed.add(1, {"worker_id": worker_id, "job_type": job_type})
+
+
+def record_active_worker(delta: int) -> None:
+    if _active_workers:
+        _active_workers.add(delta)
+
+
+def record_audit_batch_flushed() -> None:
+    if _audit_batches:
+        _audit_batches.add(1)
