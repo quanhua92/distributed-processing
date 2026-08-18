@@ -16,7 +16,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_submitted)",
+          "expr": "max(jobs_db_total{status=\"ALL\"})",
           "legendFormat": "Submitted",
           "instant": true,
           "refId": "A"
@@ -47,7 +47,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_completed)",
+          "expr": "max(jobs_db_total{status=\"COMPLETED\"})",
           "legendFormat": "Completed",
           "instant": true,
           "refId": "A"
@@ -78,7 +78,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_failed)",
+          "expr": "max(jobs_db_total{status=\"FAILED\"})",
           "legendFormat": "Failed",
           "instant": true,
           "refId": "A"
@@ -229,5 +229,5 @@
   "timezone": "browser",
   "title": "Distributed Processing Overview",
   "uid": "distributed-processing-overview",
-  "version": 4
+  "version": 7
 }

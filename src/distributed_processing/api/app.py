@@ -45,11 +45,36 @@ def create_app(cfg: Settings) -> FastAPI:
         app.state.js = js
         app.state.cfg = cfg
 
+        # 5. Background DB metrics syncer
+        import asyncio
+        from distributed_processing.telemetry import update_db_status_counts
+
+        sync_task = None
+
+        async def _sync_db_metrics():
+            while True:
+                try:
+                    counts = await db.get_status_counts()
+                    update_db_status_counts(counts)
+                except Exception:
+                    pass
+                await asyncio.sleep(2)
+
+        # Initial sync and start background task
+        try:
+            initial_counts = await db.get_status_counts()
+            update_db_status_counts(initial_counts)
+        except Exception:
+            pass
+        sync_task = asyncio.create_task(_sync_db_metrics())
+
         log.info("api.ready")
         try:
             yield
         finally:
             log.info("api.shutting_down")
+            if sync_task:
+                sync_task.cancel()
             await nc.drain()
             await db.close()
             log.info("api.stopped")

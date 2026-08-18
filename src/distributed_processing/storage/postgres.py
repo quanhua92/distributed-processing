@@ -155,3 +155,10 @@ class PostgresDatabase:
             async with self.pool.acquire() as conn:
                 rows = await conn.fetch(query, limit)
                 return [dict(r) for r in rows]
+
+    async def get_status_counts(self) -> dict[str, int]:
+        assert self.pool is not None
+        query = "SELECT status, count(*) as count FROM jobs GROUP BY status;"
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(query)
+            return {r["status"]: int(r["count"]) for r in rows}

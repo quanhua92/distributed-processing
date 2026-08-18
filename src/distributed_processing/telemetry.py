@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import base64
 import logging
-from typing import Any, Final
+import socket
+from typing import Any, Final, Iterable
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -30,6 +31,19 @@ _bytes_processed = None
 _active_workers = None
 _audit_batches = None
 
+# Database status counts for observable gauge
+_db_status_counts: dict[str, int] = {}
+
+
+def _observe_jobs_db_total(options: Any = None) -> Iterable[metrics.Observation]:
+    obs = []
+    total = 0
+    for status, count in _db_status_counts.items():
+        obs.append(metrics.Observation(count, {"status": status}))
+        total += count
+    obs.append(metrics.Observation(total, {"status": "ALL"}))
+    return obs
+
 
 def setup_telemetry(
     component: str,
@@ -51,11 +65,13 @@ def setup_telemetry(
         return None
 
     headers = _auth_headers(o2_user, o2_password)
+    hostname = socket.gethostname()
 
     resource = Resource.create(
         {
             "service.name": "distributed-processing",
             "service.component": component,
+            "service.instance.id": f"{component}-{hostname}",
             "deployment.environment": "poc",
         }
     )
@@ -81,12 +97,22 @@ def setup_telemetry(
             timeout=10,
             headers=headers,
         ),
-        export_interval_millis=2_000,  # 2s flush interval for fast updates
+        export_interval_millis=2_000,  # 2s flush interval
     )
     mp = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(mp)
     _meter = metrics.get_meter("distributed-processing", "0.1.0")
 
+    # ── Observable DB Gauge (API only) ────────────────────────────────────
+    if component == "api":
+        _meter.create_observable_gauge(
+            "jobs_db_total",
+            callbacks=[_observe_jobs_db_total],
+            description="Exact total jobs in PostgreSQL by status",
+            unit="1",
+        )
+
+    # ── Real-Time Streaming Instruments ───────────────────────────────────
     _jobs_submitted = _meter.create_counter(
         "jobs_submitted",
         description="Total number of jobs submitted",
@@ -138,6 +164,11 @@ def get_tracer() -> trace.Tracer | None:
     return _tracer
 
 
+def update_db_status_counts(counts: dict[str, int]) -> None:
+    global _db_status_counts
+    _db_status_counts = counts
+
+
 # Metric recording helper functions
 def record_job_submitted(job_type: str) -> None:
     if _jobs_submitted:
@@ -146,16 +177,16 @@ def record_job_submitted(job_type: str) -> None:
 
 def record_job_completed(worker_id: str, job_type: str, duration_ms: int, bytes_count: int = 0) -> None:
     if _jobs_completed:
-        _jobs_completed.add(1, {"worker_id": worker_id, "job_type": job_type})
+        _jobs_completed.add(1, {"job_type": job_type})
     if _job_duration:
-        _job_duration.record(duration_ms, {"worker_id": worker_id, "job_type": job_type})
+        _job_duration.record(duration_ms, {"job_type": job_type})
     if _bytes_processed and bytes_count > 0:
         _bytes_processed.add(bytes_count, {"job_type": job_type})
 
 
 def record_job_failed(worker_id: str, job_type: str) -> None:
     if _jobs_failed:
-        _jobs_failed.add(1, {"worker_id": worker_id, "job_type": job_type})
+        _jobs_failed.add(1, {"job_type": job_type})
 
 
 def record_active_worker(delta: int) -> None:
