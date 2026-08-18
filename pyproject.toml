@@ -1,0 +1,59 @@
+[project]
+name = "distributed-processing"
+version = "0.1.0"
+description = "Educational Distributed Image Processing on NATS JetStream, Postgres 18, RustFS S3, OpenObserve and Grafana"
+readme = "README.md"
+authors = [
+    { name = "Quan Hua", email = "quanhua92@gmail.com" },
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aioboto3>=15.5.0",
+    "asyncpg>=0.30.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.1",
+    "nats-py>=2.9.0",
+    "opentelemetry-api>=1.29.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "opentelemetry-instrumentation-httpx>=0.50b0",
+    "opentelemetry-sdk>=1.29.0",
+    "pillow>=11.0.0",
+    "pydantic-settings>=2.7.0",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[project.scripts]
+distributed-processing = "distributed_processing.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.0",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.0",
+    "ruff>=0.9.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/distributed_processing"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "SIM", "C4"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
