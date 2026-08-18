@@ -189,6 +189,7 @@ uv run pytest tests/unit             # run unit test suite
 
 ## Documentation Links
 
+- [docs/TESTING.md](./docs/TESTING.md) — Comprehensive verification and testing guide with step-by-step cURL commands, benchmarks, and DuckDB S3 analytics.
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — In-depth component architecture, lifecycle, and DLQ design.
 - [docs/PLUGINS.md](./docs/PLUGINS.md) — Guide to creating and registering custom processor plugins.
 - [docs/TELEMETRY.md](./docs/TELEMETRY.md) — OpenTelemetry traces, metrics specification, and OpenObserve guide.
