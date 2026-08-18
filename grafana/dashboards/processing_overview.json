@@ -3,21 +3,22 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 1,
+  "id": null,
   "links": [],
-  "liveNow": true,
+  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
       "id": 1,
       "title": "Jobs Submitted",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_submitted_total) or sum(jobs_submitted) or vector(0)",
+          "expr": "sum(jobs_submitted) or vector(0)",
           "legendFormat": "Submitted",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -38,15 +39,16 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
       "id": 2,
       "title": "Jobs Completed",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_completed_total) or sum(jobs_completed) or vector(0)",
+          "expr": "sum(jobs_completed) or vector(0)",
           "legendFormat": "Completed",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -67,15 +69,16 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
       "id": 3,
       "title": "Jobs Failed / DLQ",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_failed_total) or sum(jobs_failed) or vector(0)",
+          "expr": "sum(jobs_failed) or vector(0)",
           "legendFormat": "Failed",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -102,15 +105,16 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
       "id": 4,
       "title": "Audit Batches Flushed",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(audit_batches_flushed_total) or sum(audit_batches_flushed) or vector(0)",
+          "expr": "sum(audit_batches_flushed) or vector(0)",
           "legendFormat": "Flushed Batches",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -131,19 +135,19 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
       "id": 5,
       "title": "Job Throughput (ops/sec)",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(rate(jobs_completed_total[1m])) or sum(rate(jobs_completed[1m]))",
+          "expr": "sum(rate(jobs_completed[1m]))",
           "legendFormat": "Completed ops/s",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(jobs_submitted_total[1m])) or sum(rate(jobs_submitted[1m]))",
+          "expr": "sum(rate(jobs_submitted[1m]))",
           "legendFormat": "Submitted ops/s",
           "refId": "B"
         }
@@ -158,7 +162,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "id": 6,
       "title": "Job Processing Duration (ms)",
       "type": "timeseries",
@@ -185,19 +189,19 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
       "id": 7,
       "title": "Active Workers & Bytes Processed",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(active_workers) or sum(active_workers_gauge) or vector(0)",
+          "expr": "sum(active_workers) or vector(0)",
           "legendFormat": "Active In-Flight Workers",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(bytes_processed_total[1m])) or sum(rate(bytes_processed[1m]))",
+          "expr": "sum(rate(bytes_processed[1m]))",
           "legendFormat": "Bytes/sec",
           "refId": "B"
         }
@@ -213,11 +217,11 @@
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["distributed-processing", "openobserve", "nats"],
+  "tags": ["distributed-processing", "nats", "openobserve"],
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m"] },
   "timezone": "browser",
   "title": "Distributed Processing Overview",
   "uid": "distributed-processing-overview",
-  "version": 2
+  "version": 3
 }
