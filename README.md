@@ -22,6 +22,15 @@ Open:
 | http://localhost:9001/ | RustFS S3 console — login `rustfsadmin` / `rustfsadmin123` |
 | http://localhost:8222/ | NATS JetStream monitoring |
 
+> [!NOTE]
+> When running with `docker-compose.local.yml` to avoid host port collisions, the ports are remapped to:
+> - **API & Dashboard**: `http://localhost:18000`
+> - **Grafana**: `http://localhost:13000`
+> - **OpenObserve**: `http://localhost:15080`
+> - **RustFS S3 Console**: `http://localhost:19001`
+> - **PostgreSQL 18**: `localhost:15434`
+> - **NATS**: `localhost:14222` / `18222`
+
 ### Submit a Task via cURL
 
 **1. Data Aggregation & Hash Task:**
@@ -164,14 +173,21 @@ To add your own custom processor, see [`docs/PLUGINS.md`](./docs/PLUGINS.md).
 
 ### Run Load Generator (Seed Script)
 ```bash
-# Burst 100 mixed jobs concurrently across workers
-python scripts/seed_jobs.py --count 100 --concurrency 20
+# Burst 100 image jobs concurrently across workers
+python3 scripts/seed_jobs.py --api-url http://localhost:18000 --count 100 --concurrency 20 --category image
+
+# Burst 50 numeric data transformation jobs
+python3 scripts/seed_jobs.py --api-url http://localhost:18000 --count 50 --concurrency 10 --category data
+
+# Burst 1,000 mixed jobs across a scaled worker pool
+docker compose up -d --scale worker=4
+python3 scripts/seed_jobs.py --api-url http://localhost:18000 --count 1000 --concurrency 30 --category all
 ```
 
 ### Run DuckDB S3 Analytics
 Query historical `.jsonl.gz` audit batches directly from S3 without querying PostgreSQL:
 ```bash
-python scripts/query_logs_duckdb.py
+uv run --with duckdb python3 scripts/query_logs_duckdb.py --run
 ```
 
 ---
