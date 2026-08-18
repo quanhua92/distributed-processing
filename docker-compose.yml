@@ -1,0 +1,230 @@
+# Educational Distributed Processing — Full Local Stack
+#
+# Run:
+#   docker compose up -d --build
+#
+# Services:
+#   - API Gateway & Live Dashboard: http://localhost:8000
+#   - Grafana Metrics & Traces:    http://localhost:3000 (Admin / anonymous)
+#   - OpenObserve Console:          http://localhost:5080 (admin@local.dev / Admin123!@#)
+#   - RustFS S3 Console:            http://localhost:9001 (rustfsadmin / rustfsadmin123)
+#   - NATS Monitoring:              http://localhost:8222
+
+services:
+  # ────────────────────────────────────────────────────────────────────────
+  # Messaging: NATS JetStream (work queues + pub/sub events)
+  # ────────────────────────────────────────────────────────────────────────
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data", "-m", "8222", "-V"]
+    ports:
+      - "4222:4222"   # client port
+      - "8222:8222"   # monitoring port
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Relational Metadata: PostgreSQL 18
+  # ────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: processing
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d processing"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Object Storage: RustFS (S3-compatible)
+  # ────────────────────────────────────────────────────────────────────────
+  rustfs:
+    image: rustfs/rustfs:latest
+    command: ["/data"]
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin123
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_OBS_LOGGER_LEVEL: error
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # S3 Web Console
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Telemetry & Observability: OpenObserve
+  # ────────────────────────────────────────────────────────────────────────
+  openobserve:
+    image: openobserve/openobserve:latest
+    environment:
+      ZO_DATA_DIR: /data
+      ZO_NO_AUTH: "true"
+      ZO_FEATURE_PERMISSIVE: "true"
+      ZO_ROOT_USER_EMAIL: admin@local.dev
+      ZO_ROOT_USER_PASSWORD: Admin123!@#
+      RUST_LOG: info
+    ports:
+      - "5080:5080"
+    volumes:
+      - o2-data:/data
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Metrics Visualizer: Grafana
+  # ────────────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - openobserve
+
+  # ────────────────────────────────────────────────────────────────────────
+  # API Gateway & Static Dashboard Server
+  # ────────────────────────────────────────────────────────────────────────
+  api:
+    build: .
+    command: ["--role", "api"]
+    environment:
+      NATS_URL: nats://nats:4222
+      NATS_STREAM: JOBS
+      NATS_SUBJECT_REQUEST: jobs.request
+      NATS_SUBJECT_EVENTS: jobs.events
+      NATS_SUBJECT_DLQ: jobs.dlq
+      NATS_CONSUMER_GROUP: job-workers
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: processing
+      S3_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin123
+      S3_BUCKET_DATA: processing-data
+      S3_BUCKET_LOGS: processing-logs
+      O2_OTLP_ENDPOINT: http://openobserve:5080/api/default
+      O2_USER: admin@local.dev
+      O2_PASSWORD: Admin123!@#
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+      openobserve:
+        condition: service_started
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Generic Processing Workers
+  # ────────────────────────────────────────────────────────────────────────
+  worker:
+    build: .
+    command: ["--role", "worker"]
+    deploy:
+      replicas: 2
+    environment:
+      NATS_URL: nats://nats:4222
+      NATS_STREAM: JOBS
+      NATS_SUBJECT_REQUEST: jobs.request
+      NATS_SUBJECT_EVENTS: jobs.events
+      NATS_SUBJECT_DLQ: jobs.dlq
+      NATS_CONSUMER_GROUP: job-workers
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: processing
+      S3_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin123
+      S3_BUCKET_DATA: processing-data
+      S3_BUCKET_LOGS: processing-logs
+      O2_OTLP_ENDPOINT: http://openobserve:5080/api/default
+      O2_USER: admin@local.dev
+      O2_PASSWORD: Admin123!@#
+      WORKER_CONCURRENCY: 5
+    depends_on:
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+      openobserve:
+        condition: service_started
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Decoupled Audit & S3 Archival Consumer
+  # ────────────────────────────────────────────────────────────────────────
+  audit:
+    build: .
+    command: ["--role", "audit"]
+    environment:
+      NATS_URL: nats://nats:4222
+      NATS_STREAM: JOBS
+      NATS_SUBJECT_REQUEST: jobs.request
+      NATS_SUBJECT_EVENTS: jobs.events
+      NATS_SUBJECT_DLQ: jobs.dlq
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: processing
+      S3_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin123
+      S3_BUCKET_DATA: processing-data
+      S3_BUCKET_LOGS: processing-logs
+      O2_OTLP_ENDPOINT: http://openobserve:5080/api/default
+      O2_USER: admin@local.dev
+      O2_PASSWORD: Admin123!@#
+      AUDIT_BATCH_SIZE: 100
+      AUDIT_FLUSH_INTERVAL_SECONDS: 15
+    depends_on:
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+      openobserve:
+        condition: service_started
+
+volumes:
+  nats-data:
+  pg-data:
+  rustfs-data:
+  o2-data:

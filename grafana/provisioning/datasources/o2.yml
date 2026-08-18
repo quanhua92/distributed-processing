@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: OpenObserve
+    type: prometheus
+    access: proxy
+    uid: openobserve
+    url: http://openobserve:5080/api/default/prometheus
+    isDefault: true
+    editable: true
+    basicAuth: true
+    basicAuthUser: "admin@local.dev"
+    secureJsonData:
+      basicAuthPassword: "Admin123!@#"
+    jsonData:
+      httpMethod: POST
+      timeInterval: 5s
