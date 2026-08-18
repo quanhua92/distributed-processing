@@ -42,7 +42,7 @@ class JobRunner:
         self.s3 = s3
         self.registry = registry
         self.publish_event = nc_publish_event
-        self.http_client = httpx.AsyncClient(timeout=15.0)
+        self.http_client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
 
     async def close(self) -> None:
         await self.http_client.aclose()
@@ -53,7 +53,7 @@ class JobRunner:
         payload = payload_msg.get("payload", {})
 
         tracer = get_tracer()
-        span_ctx = tracer.start_as_current_span(
+        span = tracer.start_span(
             "worker.process_job",
             attributes={
                 "job.id": job_id,
@@ -147,8 +147,8 @@ class JobRunner:
         finally:
             if active_workers_gauge:
                 active_workers_gauge.add(-1)
-            if span_ctx:
-                span_ctx.__exit__(None, None, None)
+            if span:
+                span.end()
 
     async def _emit_event(self, job_id: str, job_type: str, event_type: str, extra: dict[str, Any] | None = None) -> None:
         evt: dict[str, Any] = {

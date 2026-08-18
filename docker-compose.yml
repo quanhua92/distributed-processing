@@ -18,8 +18,8 @@ services:
     image: nats:2.10-alpine
     command: ["-js", "-sd", "/data", "-m", "8222", "-V"]
     ports:
-      - "4222:4222"   # client port
-      - "8222:8222"   # monitoring port
+      - "0.0.0.0:4222:4222"   # client port
+      - "0.0.0.0:8222:8222"   # monitoring port
     volumes:
       - nats-data:/data
     healthcheck:
@@ -38,9 +38,9 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: processing
     ports:
-      - "5432:5432"
+      - "0.0.0.0:5432:5432"
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d processing"]
@@ -62,8 +62,8 @@ services:
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_OBS_LOGGER_LEVEL: error
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # S3 Web Console
+      - "0.0.0.0:9000:9000"   # S3 API
+      - "0.0.0.0:9001:9001"   # S3 Web Console
     volumes:
       - rustfs-data:/data
     healthcheck:
@@ -85,7 +85,7 @@ services:
       ZO_ROOT_USER_PASSWORD: Admin123!@#
       RUST_LOG: info
     ports:
-      - "5080:5080"
+      - "0.0.0.0:5080:5080"
     volumes:
       - o2-data:/data
 
@@ -103,7 +103,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
     depends_on:
       - openobserve
 
@@ -136,7 +136,7 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     depends_on:
       nats:
         condition: service_healthy

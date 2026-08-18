@@ -76,7 +76,7 @@ def setup_telemetry(
         )
     )
     trace.set_tracer_provider(tp)
-    _tracer = trace.get_tracer("distributed-processing", version="0.1.0")
+    _tracer = trace.get_tracer("distributed-processing", "0.1.0")
 
     # ── Metrics ───────────────────────────────────────────────────────────
     metric_reader = PeriodicExportingMetricReader(
@@ -89,7 +89,7 @@ def setup_telemetry(
     )
     mp = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(mp)
-    _meter = metrics.get_meter("distributed-processing", version="0.1.0")
+    _meter = metrics.get_meter("distributed-processing", "0.1.0")
 
     # Initialize instruments
     jobs_submitted_counter = _meter.create_counter(

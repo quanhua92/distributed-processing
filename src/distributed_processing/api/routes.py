@@ -49,7 +49,7 @@ async def submit_job(req: JobSubmitRequest, request: Request) -> dict[str, Any]:
     job_id = str(uuid.uuid4())
     tracer = get_tracer()
 
-    span_ctx = tracer.start_as_current_span(
+    span = tracer.start_span(
         "api.submit_job",
         attributes={"job.id": job_id, "job.type": req.job_type},
     ) if tracer else None
@@ -83,8 +83,8 @@ async def submit_job(req: JobSubmitRequest, request: Request) -> dict[str, Any]:
             "payload": req.payload,
         }
     finally:
-        if span_ctx:
-            span_ctx.__exit__(None, None, None)
+        if span:
+            span.end()
 
 
 @router.post("/jobs/image/blur", response_model=JobResponse)
