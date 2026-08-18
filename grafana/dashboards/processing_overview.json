@@ -16,7 +16,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_submitted) or vector(0)",
+          "expr": "sum(jobs_submitted)",
           "legendFormat": "Submitted",
           "instant": true,
           "refId": "A"
@@ -25,6 +25,7 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
+          "noValue": "0",
           "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
         },
         "overrides": []
@@ -46,7 +47,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_completed) or vector(0)",
+          "expr": "sum(jobs_completed)",
           "legendFormat": "Completed",
           "instant": true,
           "refId": "A"
@@ -55,6 +56,7 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
+          "noValue": "0",
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         },
         "overrides": []
@@ -76,7 +78,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(jobs_failed) or vector(0)",
+          "expr": "sum(jobs_failed)",
           "legendFormat": "Failed",
           "instant": true,
           "refId": "A"
@@ -85,6 +87,7 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -112,7 +115,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(audit_batches_flushed) or vector(0)",
+          "expr": "sum(audit_batches_flushed)",
           "legendFormat": "Flushed Batches",
           "instant": true,
           "refId": "A"
@@ -121,6 +124,7 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
+          "noValue": "0",
           "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] }
         },
         "overrides": []
@@ -155,7 +159,8 @@
       "fieldConfig": {
         "defaults": {
           "custom": { "drawStyle": "line", "lineInterpolation": "smooth" },
-          "unit": "ops"
+          "unit": "ops",
+          "noValue": "0"
         },
         "overrides": []
       }
@@ -196,7 +201,7 @@
       "datasource": { "type": "prometheus", "uid": "openobserve" },
       "targets": [
         {
-          "expr": "sum(active_workers) or vector(0)",
+          "expr": "sum(active_workers)",
           "legendFormat": "Active In-Flight Workers",
           "refId": "A"
         },
@@ -208,7 +213,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" },
+          "noValue": "0"
         },
         "overrides": []
       }
@@ -223,5 +229,5 @@
   "timezone": "browser",
   "title": "Distributed Processing Overview",
   "uid": "distributed-processing-overview",
-  "version": 3
+  "version": 4
 }
